@@ -1,0 +1,67 @@
+name: Build and Push to Amazon ECR
+
+on:
+  push:
+    branches:
+      # devブランチへのプッシュ時に実行
+      - dev
+  pull_request:
+    branches:
+      # devブランチへのPRがクローズされた時に実行
+      - dev
+    types: [closed]
+
+env:
+  # 東京リージョン
+  AWS_REGION: ap-northeast-1
+  # ECRリポジトリ名
+  ECR_REPOSITORY: portfolio-next
+
+jobs:
+  build-and-push:
+    name: Build and Push to ECR
+    runs-on: ubuntu-latest
+    # devブランチへのプッシュ、またはdevブランチへのマージされたPRの場合に実行
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+
+    steps:
+      # リポジトリのコードをチェックアウト
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # AWS認証情報を設定
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Amazon ECRにログイン
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # イメージのビルド、タグ付け、プッシュ
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          # ECRレジストリのURL
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          # コミットのSHAをタグとして使用
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Dockerイメージをビルド
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+
+          # Amazon ECRにプッシュ
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      # デプロイ情報の出力
+      - name: Print deployment info
+        run: |
+          echo "Deployed image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
+          echo "Deployment completed at $(date)"
