@@ -1,0 +1,6 @@
+# すべてのロボットに対して
+User-agent: *
+Allow: /
+
+# サイトマップの位置
+Sitemap: https://example.com/sitemap.xml 

@@ -1,0 +1,25 @@
+# ビルド成果物
+.next
+out
+
+# 依存関係
+node_modules
+
+# 開発用設定ファイル
+.git
+.gitignore
+.github
+.vscode
+.idea
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# その他
+README.md
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store 

@@ -1,0 +1,45 @@
+services:
+  # 開発環境用サービス
+  next-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps # 依存関係のインストールまでで止める
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app # ソースコードをマウント
+      - /app/node_modules # node_modulesはコンテナ内のものを使用
+      - /app/.next # .nextディレクトリもコンテナ内のものを使用
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+    # ホットリロードのためにポーリングを有効にする
+    # Macや一部のLinux環境ではファイル監視の問題を解決
+
+  # 本番環境用サービス
+  next-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_VERSION=18 # Node.jsのバージョンを指定可能
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
