@@ -23,11 +23,11 @@ GitHub Secrets に以下の値を設定する必要があります：
 
 ## ワークフローファイル
 
-`.github/workflows/ecr-deploy.yml`
+`.github/workflows/push-ecr-deploy-js.yml`
 
 ## 使用方法
 
-1. ECR リポジトリを作成します（名前: `js-app-repo`）
+1. ECR リポジトリを用意する
 2. GitHub Secrets に必要な環境変数を設定します
 3. `dev`ブランチにプッシュすると、ワークフローが自動的に実行されます
 
