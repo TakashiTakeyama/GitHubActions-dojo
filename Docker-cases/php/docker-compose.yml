@@ -1,0 +1,28 @@
+version: "3.8" 
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html  # ローカルのsrcディレクトリをコンテナの/var/www/htmlにマウント
+    depends_on:
+      - db  # dbサービスが先に起動
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: app  # データベース名
+      MYSQL_USER: user  # ユーザー名
+      MYSQL_PASSWORD: password  # ユーザーのパスワード
+      MYSQL_ROOT_PASSWORD: rootpassword  # rootユーザーのパスワード
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:  # MySQLデータを永続化するためのボリューム
