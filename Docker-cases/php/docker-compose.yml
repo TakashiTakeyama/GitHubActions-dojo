@@ -1,28 +1,31 @@
-version: "3.8" 
+version: "3.8"
 
 services:
-  php:
-    build:
-      context: .
-      dockerfile: Dockerfile 
+  app:
+    build: .  # カレントディレクトリのDockerfileを使用
     ports:
-      - "8080:80"
+      - "8080:80"  # ホストの8080ポートをコンテナの80ポートにマッピング
     volumes:
-      - ./src:/var/www/html  # ローカルのsrcディレクトリをコンテナの/var/www/htmlにマウント
-    depends_on:
-      - db  # dbサービスが先に起動
+      - ./src:/var/www/html  # ソースコードをコンテナにマウント
+    environment:  # 環境変数の設定
+      APP_ENV:        development  # 開発環境として設定
+      DB_HOST:        db  # データベースホスト名
+      DB_PORT:        "3306"  # データベースポート
+      DB_DATABASE:    app  # データベース名
+      DB_USERNAME:    user  # データベースユーザー名
+      DB_PASSWORD:    password  # データベースパスワード
 
   db:
-    image: mysql:8.0
+    image: mysql:8.0  # MySQL 8.0イメージを使用
     ports:
-      - "3306:3306"
-    environment:
-      MYSQL_DATABASE: app  # データベース名
-      MYSQL_USER: user  # ユーザー名
-      MYSQL_PASSWORD: password  # ユーザーのパスワード
+      - "3306:3306"  # ホストの3306ポートをコンテナの3306ポートにマッピング
+    environment:  # 環境変数の設定
+      MYSQL_DATABASE:      app  # 作成するデータベース名
+      MYSQL_USER:          user  # 作成するユーザー名
+      MYSQL_PASSWORD:      password  # ユーザーのパスワード
       MYSQL_ROOT_PASSWORD: rootpassword  # rootユーザーのパスワード
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql  # データベースの永続化
 
 volumes:
   mysql_data:  # MySQLデータを永続化するためのボリューム

@@ -22,7 +22,7 @@ Next.js アプリケーションを Docker コンテナ化する
 
 ## Dockerfile の特徴
 
-このサンプルの Dockerfile は、最新の Next.js スタンドアロンモードを取り入れた最適化構成となっており、以下の点が特徴です：
+このサンプルの Dockerfile は、最新の Next.js スタンドアロンモードを取り入れた最適化構成となっており、以下の点が特徴
 
 1. **マルチステージビルド**  
    - 依存関係のインストール（deps ステージ）、アプリケーションのビルド（builder ステージ）、実行に必要なファイルのみの抽出（runner ステージ）を分離し、イメージサイズを最小化しています。
@@ -40,7 +40,7 @@ Next.js アプリケーションを Docker コンテナ化する
    - 定期的に `wget` を用いて `http://localhost:3000/` をチェックするヘルスチェック設定を含み、サービスの健全性を監視しています。
 
 6. **柔軟な設定**  
-   - ビルド引数を使用して Node.js のバージョンをカスタマイズ可能にしており、環境変数（NODE_ENV、PORT、HOSTNAME）の設定により、実行時の挙動を柔軟に変更できます。
+   - ビルド引数を使用して Node.js のバージョンをカスタマイズ可能にしており、環境変数（NODE_ENV、PORT、HOSTNAME）の設定により、実行時の挙動を柔軟に変更できる。
 
 ## ローカル開発環境での実行
 
@@ -65,7 +65,7 @@ npm run dev
 
 ### 4. アプリケーションへのアクセス
 
-ブラウザで http://localhost:3000 にアクセスしてください。
+ブラウザで http://localhost:3000 にアクセス
 
 ## Docker Compose での使用方法
 
@@ -132,7 +132,7 @@ docker run -p 3000:3000 -v $(pwd):/app -e NODE_ENV=development next-app npm run 
 
 ### public/
 
-`public/`ディレクトリは、Next.js アプリケーションにおいて静的ファイルを配置するための特別なフォルダです。ここに配置されたファイルは、ビルドプロセス中に処理されず、Web ルート（`/`）から直接アクセス可能になります。
+`public/`ディレクトリは、Next.js アプリケーションにおいて静的ファイルを配置するための特別なフォルダです。ここに配置されたファイルは、ビルドプロセス中に処理されず、Web ルート（`/`）から直接アクセス可能になる
 
 **主な用途:**
 
@@ -142,8 +142,6 @@ docker run -p 3000:3000 -v $(pwd):/app -e NODE_ENV=development next-app npm run 
 - robots.txt、sitemap.xml
 - PWA マニフェストファイル
 
-例えば、`public/images/logo.png`を配置すると、ブラウザからは`/images/logo.png`として、React コンポーネントからは`<img src="/images/logo.png">`としてアクセスできます。
+例えば、`public/images/logo.png`を配置すると、ブラウザからは`/images/logo.png`として、React コンポーネントからは`<img src="/images/logo.png">`としてアクセスできる
 
 ### src/
-
-// ... 残りの既存の内容 ...
