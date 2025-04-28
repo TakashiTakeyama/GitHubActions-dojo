@@ -1,0 +1,6 @@
+name: Sample Workflow
+
+on:
+  push:
+    branches:
+      - main
