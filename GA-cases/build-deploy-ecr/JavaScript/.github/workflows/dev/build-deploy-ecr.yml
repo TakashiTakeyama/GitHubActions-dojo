@@ -1,4 +1,3 @@
-# JavaScriptアプリケーションをビルドしてAmazon ECRにデプロイするワークフロー
 name: Build and Deploy to ECR
 
 # devブランチへのプッシュ時に実行

@@ -1,0 +1,94 @@
+name: Build & Deploy to ECR     # GitHub UI に表示されるワークフロー名
+
+# ──────────────────────────────────────────────
+# 1. トリガー
+# dev ブランチへ push された時のみ発火
+# ──────────────────────────────────────────────
+on:
+  push:
+    branches: [ dev ]
+
+# ──────────────────────────────────────────────
+# 2. 環境変数
+# ──────────────────────────────────────────────
+env:
+  AWS_REGION: ap-northeast-1
+  ECR_REPOSITORY: js-app-repo
+  IMAGE_NAME: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-1.amazonaws.com/js-app-repo
+
+jobs:
+  build:
+    runs-on: ubuntu-latest          # GitHub ホストランナー
+
+    # このジョブに付与する権限
+    permissions:
+      id-token: write               # OIDC トークン発行を許可
+      contents: read                # リポジトリ読み取り
+
+    steps:
+      # ──────────────────────────────────────
+      # 3. ソースコードをチェックアウト
+      # ──────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ──────────────────────────────────────
+      # 4. npm キャッシュ
+      #    package-lock.json が同じなら再利用
+      # ──────────────────────────────────────
+      - uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+
+      # ──────────────────────────────────────
+      # 5. Node.js 18 をセットアップ
+      # ──────────────────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # ──────────────────────────────────────
+      # 6. 依存インストール・Lint・ユニットテスト
+      #    失敗すると以降のステップはスキップ
+      # ──────────────────────────────────────
+      - run: npm ci                  # lockfile 準拠で高速・再現性あり
+      - run: npm run lint            # ESLint など
+      - run: npm test                # Jest など
+
+      # ──────────────────────────────────────
+      # 7. OIDC で AWS に一時クレデンシャル取得
+      #    長期キー (AK/SK) 不要 ＝ ベストプラクティス
+      # ──────────────────────────────────────
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsECRPush
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ──────────────────────────────────────
+      # 8. Buildx セットアップ（マルチアーキ & キャッシュ対応）
+      # ──────────────────────────────────────
+      - uses: docker/setup-buildx-action@v2
+
+      # ──────────────────────────────────────
+      # 9. Docker イメージをビルド & プッシュ
+      #    ・コミット SHA と latest の 2 タグ
+      #    ・レイヤーキャッシュを ECR に保存
+      # ──────────────────────────────────────
+      - name: Build & Push
+        id: build                    # 後続ステップで outputs を参照
+        uses: docker/build-push-action@v4
+        with:
+          context: .                 # ルートで Dockerfile を探す
+          push: true                 # ビルド後にプッシュ
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache
+          cache-to:   type=registry,ref=${{ env.IMAGE_NAME }}:cache,mode=max
+
+      # ──────────────────────────────────────
+      # 10. 出力：イメージのダイジェストを GITHUB_OUTPUT に書き出し
+      #     別ジョブでのデプロイや Slack 通知に使える
+      # ──────────────────────────────────────
+      - name: Image digest
+        run: echo "digest=${{ steps.build.outputs.digest }}" >> $GITHUB_OUTPUT
