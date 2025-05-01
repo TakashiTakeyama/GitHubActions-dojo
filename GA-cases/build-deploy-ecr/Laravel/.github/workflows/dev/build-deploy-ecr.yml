@@ -1,0 +1,1 @@
+name: Build & Deploy to ECR     # GitHub UI に表示されるワークフロー名
