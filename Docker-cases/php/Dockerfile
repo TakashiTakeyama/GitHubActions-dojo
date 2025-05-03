@@ -3,11 +3,11 @@ FROM php:8.2-apache
 
 # システムパッケージとPHP拡張機能のインストール
 RUN apt-get update && apt-get install -y \
-    libzip-dev \  # ZIP拡張機能の依存関係
-    zip \         # ZIPファイル操作
-    unzip \       # ZIPファイル解凍
-    git \         # Git
-    curl \        # cURL
+    libzip-dev \  
+    zip \         
+    unzip \       
+    git \       
+    curl \        
     && docker-php-ext-install zip pdo pdo_mysql  # PHP拡張機能のインストール
 
 # Composerのインストール
@@ -29,7 +29,7 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"  # 本番環境�
 RUN echo "date.timezone = Asia/Tokyo" > /usr/local/etc/php/conf.d/timezone.ini  # タイムゾーンを東京に設定
 
 # ポート公開
-EXPOSE 80  # 80ポートを公開
+EXPOSE 80
 
 # コンテナ起動時のコマンド
 CMD ["apache2-foreground"]  # Apacheをフォアグラウンドで起動 
