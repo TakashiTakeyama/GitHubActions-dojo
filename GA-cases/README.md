@@ -15,6 +15,8 @@ GitHub Actions のワークフロー学習用ケース集です。
   - 言語別の ECR デプロイパターン（JavaScript / Laravel）
 - `terraform-plan-diff-template/`
   - PR 起点で Terraform plan を行う reusable workflow テンプレート
+- `terraform-fmt-template/`
+  - PR 起点で Terraform fmt チェックを行うテンプレート
 
 ## 命名ルール（このフォルダでの推奨）
 

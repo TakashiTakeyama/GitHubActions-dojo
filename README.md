@@ -13,7 +13,8 @@ githubactions-dojo/
 │   ├── Go/
 │   ├── Next.js-app-deploy/
 │   ├── build-deploy-ecr/
-│   └── terraform-plan-diff-template/
+│   ├── terraform-plan-diff-template/
+│   └── terraform-fmt-template/
 ├── Docker-cases/                # Docker のケース
 │   ├── README.md                # ケース一覧
 │   ├── javascript/
@@ -23,9 +24,6 @@ githubactions-dojo/
 │   └── Laravel/
 └── README.md
 ```
-
-> 補足: `GA-cases` は歴史的なディレクトリ名です。  
-> 意味は **GitHub Actions Cases** で、ワークフローの学習サンプルをまとめています。
 
 ## このリポジトリの方針
 

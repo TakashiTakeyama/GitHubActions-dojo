@@ -1,0 +1,54 @@
+name: terraform-fmt-template
+
+# Terraform のフォーマットチェック専用 workflow
+on:
+  # 手動実行
+  workflow_dispatch:
+  # PR 更新時に実行
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  # actions/checkout に必要
+  contents: read
+  # PR 情報の読み取りに必要
+  pull-requests: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Terraform 関連の変更がある場合のみ fmt チェックを実行する
+  check-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matched: ${{ steps.path-filter.outputs.matched }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect terraform-related changes
+        uses: dorny/paths-filter@v3
+        id: path-filter
+        with:
+          filters: |
+            matched:
+              - '**/*.tf'
+              - '.github/workflows/terraform-fmt-template.yml'
+
+  terraform-fmt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: check-run
+    if: ${{ needs.check-run.outputs.matched == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -diff -recursive .
