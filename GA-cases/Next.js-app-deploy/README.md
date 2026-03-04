@@ -2,7 +2,7 @@
 
 ## 概要
 
-このケースでは、GitHub Actions を使用して Next.js アプリケーションをビルドし、デプロイするパイプラインを構築します。Docker コンテナを使用して、アプリケーションを効率的にデプロイする方法を示しています。
+このケースでは、GitHub Actions を使用して Next.js アプリケーションの Docker イメージをビルドし、ECR へ push する基本パターンを扱います。
 
 ## パイプラインの流れ
 
@@ -17,19 +17,19 @@
 
 GitHub Secrets に以下の値を設定する必要があります：
 
-- `DEPLOY_TOKEN`: デプロイに必要なアクセストークン
-- `DEPLOY_HOST`: デプロイ先のホスト情報
+- `AWS_ACCOUNT_ID`: AWS アカウント ID
 
 ## ワークフローファイル
 
-`workflows/next-app-deploy.yml`
+`.github/workflows/next-app-deploy.yml`
 
 ## 使用方法
 
 1. 必要な環境変数を GitHub Secrets に設定します
-2. `main`ブランチにプッシュすると、ワークフローが自動的に実行されます
-3. デプロイの進行状況は GitHub Actions のログで確認できます
+2. `dev` ブランチに push するとワークフローが自動実行されます
+3. `dev` 向け PR がマージされた場合も実行されます
+4. 実行結果は GitHub Actions のログで確認できます
 
 ## Dockerfile について
 
-このケースでは、Next.js アプリケーションに最適化された Dockerfile を使用しています。マルチステージビルドを採用し、本番環境用の軽量なイメージを作成します。
+このケースでは、Next.js アプリケーション向けの Dockerfile を利用します。必要に応じてマルチステージビルドやタグ戦略を追加してください。

@@ -1,11 +1,12 @@
 # JavaScriptアプリケーションのビルドワークフロー
 name: Simple Build
 
-# stgブランチへのプッシュ時に実行
+# main ブランチへの push 時に実行
 on:
   push:
     branches:
-      - stg
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,11 +15,11 @@ jobs:
     steps:
       # リポジトリのコードをチェックアウト
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Node.js v18をセットアップ
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
 
@@ -36,7 +37,7 @@ jobs:
 
       # ビルド成果物をアーティファクトとして保存
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist  # アーティファクト名
           path: dist/ # 保存するディレクトリパス

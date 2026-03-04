@@ -1,0 +1,42 @@
+name: go-sample-ci
+
+# Go プロジェクト向けの最小 CI サンプル
+on:
+  # main への push で実行
+  push:
+    branches: [main]
+  # main 向け PR でも実行（レビュー前の品質確認）
+  pull_request:
+    branches: [main]
+  # 手動実行
+  workflow_dispatch:
+
+jobs:
+  test:
+    # GitHub 管理ランナー
+    runs-on: ubuntu-latest
+    steps:
+      # ソースコード取得
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Go ツールチェーンをセットアップ
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      # 依存モジュールとビルドキャッシュを保存して高速化
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # すべてのパッケージをテスト
+      - name: Run tests
+        run: go test ./...
