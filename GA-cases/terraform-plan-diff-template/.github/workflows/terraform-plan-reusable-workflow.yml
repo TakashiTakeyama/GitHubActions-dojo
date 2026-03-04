@@ -1,0 +1,80 @@
+name: terraform-plan-reusable-workflow-template
+
+# 他 workflow から呼び出される再利用用 workflow
+on:
+  workflow_call:
+    # 呼び出し元から受け取るパラメータ定義
+    inputs:
+      # 実行対象の識別子（artifact 名などに利用）
+      stage:
+        required: true
+        type: string
+      # GitHub Environments 名（例: development / production）
+      environment:
+        required: true
+        type: string
+      # Terraform バージョンは呼び出し元から上書き可能
+      terraform_version:
+        required: false
+        type: string
+        default: "1.8.5"
+      # Terraform を実行する作業ディレクトリ
+      working_directory:
+        required: false
+        type: string
+        default: "."
+
+# 最小権限を意識した permissions 設定
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    # Environment 保護ルール（承認など）を適用できる
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash
+        # 以降の run コマンドはこのディレクトリ配下で実行
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      # リポジトリのコードを取得
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Terraform CLI をセットアップ
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+
+      # フォーマット崩れを事前検出
+      - name: Terraform format check
+        run: terraform fmt -check -recursive
+
+      # backend 初期化（provider/plugin 取得）
+      - name: Terraform init
+        run: terraform init -input=false
+
+      # 構文と依存関係の静的チェック
+      - name: Terraform validate
+        run: terraform validate
+
+      # plan をバイナリ出力して後段で再利用
+      - name: Terraform plan
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      # PR 共有しやすいテキスト形式へ変換
+      - name: Export plan to text
+        run: terraform show -no-color tfplan > plan.txt
+
+      # plan 結果を artifact として保存
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ inputs.stage }}
+          path: ${{ inputs.working_directory }}/plan.txt

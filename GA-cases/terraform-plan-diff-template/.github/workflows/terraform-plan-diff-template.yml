@@ -1,0 +1,73 @@
+name: terraform-plan-diff-template
+
+# 実行トリガー定義
+on:
+  # PR イベントを契機に Terraform plan を実行
+  pull_request:
+    # opened: PR新規作成時
+    # synchronize: PR に新しいコミットが push された時
+    # reopened: Close 済み PR を再オープンした時
+    types: [opened, synchronize, reopened]
+    # main / develop 向け PR のみ対象
+    branches:
+      - main
+      - develop
+  # 手動実行（検証・再実行用）
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+# 同一PR・同一workflowの重複実行を防止する
+# 新しいコミットが来たら古い実行を止め、最新の plan 結果だけ残す
+concurrency:
+  # workflow名 + PR番号（PR以外では ref）で実行グループを作る
+  group: terraform-plan-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # 同じ group の実行が進行中ならキャンセルして置き換える
+  cancel-in-progress: true
+
+jobs:
+  # develop 向けの plan（例: 開発環境）
+  terraform-plan-dev:
+    uses: ./.github/workflows/terraform-plan-reusable-workflow.yml
+    if: github.base_ref == 'develop'
+    secrets: inherit
+    # matrix で同じジョブ定義を複数環境に展開する
+    # include に実行したい環境セットを追加すれば、plan 対象を増やせる
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - stage: dev-main
+            environment: development
+            working_directory: terraform/env/dev
+          - stage: dev-common
+            environment: development-common
+            working_directory: terraform/env/dev-common
+    with:
+      stage: ${{ matrix.stage }}
+      environment: ${{ matrix.environment }}
+      working_directory: ${{ matrix.working_directory }}
+
+  # main 向けの plan（例: 本番環境）
+  terraform-plan-prod:
+    uses: ./.github/workflows/terraform-plan-reusable-workflow.yml
+    if: github.base_ref == 'main'
+    secrets: inherit
+    # 本番側も同様に matrix で複数ディレクトリを順次 plan する
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - stage: prod-main
+            environment: production
+            working_directory: terraform/env/prod
+          - stage: prod-common
+            environment: production-common
+            working_directory: terraform/env/prod-common
+    with:
+      stage: ${{ matrix.stage }}
+      environment: ${{ matrix.environment }}
+      working_directory: ${{ matrix.working_directory }}
