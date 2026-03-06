@@ -1,0 +1,39 @@
+name: build-deploy-ecr-laravel-template
+
+# Laravel 用 ECR push テンプレート（最小構成）
+on:
+  # 開発ブランチ更新時に実行
+  push:
+    branches: [dev]
+  # 手動実行
+  workflow_dispatch:
+
+env:
+  # 利用時は環境に合わせて変更
+  AWS_REGION: ap-northeast-1
+  ECR_REPOSITORY: sample-laravel-app
+
+jobs:
+  build-and-push:
+    # Ubuntu ランナーで実行
+    runs-on: ubuntu-latest
+
+    # OIDC + リポジトリ読み取りの最小権限
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ECR 向け共通処理は composite action に集約する
+      - name: Build and push image to ECR
+        uses: ./.github/actions/ecr-build-push
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsECRPush
+          ecr-repository: ${{ env.ECR_REPOSITORY }}
+          image-tags: |
+            ${{ github.sha }}
+            latest

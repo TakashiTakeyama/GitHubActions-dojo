@@ -1,0 +1,55 @@
+name: build-deploy-ecr-javascript-template-v2
+
+on:
+  push:
+    branches: [ dev ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-1
+  ECR_REPOSITORY: js-app-repo
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 品質チェックは ECR push 前に終わらせておく
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      # ECR 向けの build/push 共通処理は composite action に寄せる
+      - name: Build and push image to ECR
+        id: build
+        uses: ./.github/actions/ecr-build-push
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsECRPush
+          ecr-repository: ${{ env.ECR_REPOSITORY }}
+          image-tags: |
+            ${{ github.sha }}
+            latest
+          cache-tag: cache
+
+      - name: Show image digest
+        run: |
+          echo "Image digest: ${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"

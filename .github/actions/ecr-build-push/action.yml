@@ -1,0 +1,100 @@
+name: ECR Build and Push
+description: Build a Docker image and push it to Amazon ECR with OIDC authentication.
+
+inputs:
+  aws-region:
+    description: AWS region used for authentication and ECR access.
+    required: true
+  role-to-assume:
+    description: IAM role ARN assumed via GitHub OIDC.
+    required: true
+  ecr-repository:
+    description: Target ECR repository name without registry prefix.
+    required: true
+  image-tags:
+    description: Newline-separated image tags such as sha and latest.
+    required: true
+  context:
+    description: Docker build context.
+    required: false
+    default: .
+  dockerfile:
+    description: Dockerfile path relative to the repository root.
+    required: false
+    default: Dockerfile
+  push:
+    description: Whether to push the image.
+    required: false
+    default: "true"
+  cache-tag:
+    description: Optional ECR tag name used for build cache such as cache.
+    required: false
+    default: ""
+
+outputs:
+  digest:
+    description: Digest returned by docker/build-push-action.
+    value: ${{ steps.build.outputs.digest }}
+  registry:
+    description: Amazon ECR registry URL resolved after login.
+    value: ${{ steps.login-ecr.outputs.registry }}
+
+runs:
+  using: composite
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.role-to-assume }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Prepare full image tags
+      id: prepare-tags
+      shell: bash
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ${{ inputs.ecr-repository }}
+        IMAGE_TAGS: ${{ inputs.image-tags }}
+        CACHE_TAG: ${{ inputs.cache-tag }}
+      run: |
+        set -euo pipefail
+
+        : > tags.txt
+        while IFS= read -r tag; do
+          if [[ -z "${tag}" ]]; then
+            continue
+          fi
+          printf '%s/%s:%s\n' "${REGISTRY}" "${ECR_REPOSITORY}" "${tag}" >> tags.txt
+        done <<< "${IMAGE_TAGS}"
+
+        {
+          echo "tags<<EOF"
+          cat tags.txt
+          echo "EOF"
+        } >> "${GITHUB_OUTPUT}"
+
+        if [[ -n "${CACHE_TAG}" ]]; then
+          echo "cache_from=type=registry,ref=${REGISTRY}/${ECR_REPOSITORY}:${CACHE_TAG}" >> "${GITHUB_OUTPUT}"
+          echo "cache_to=type=registry,ref=${REGISTRY}/${ECR_REPOSITORY}:${CACHE_TAG},mode=max" >> "${GITHUB_OUTPUT}"
+        else
+          echo "cache_from=" >> "${GITHUB_OUTPUT}"
+          echo "cache_to=" >> "${GITHUB_OUTPUT}"
+        fi
+
+    - name: Build and push image
+      id: build
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ inputs.context }}
+        file: ${{ inputs.dockerfile }}
+        push: ${{ inputs.push }}
+        tags: ${{ steps.prepare-tags.outputs.tags }}
+        cache-from: ${{ steps.prepare-tags.outputs.cache_from }}
+        cache-to: ${{ steps.prepare-tags.outputs.cache_to }}
