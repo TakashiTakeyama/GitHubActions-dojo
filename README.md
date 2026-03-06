@@ -1,6 +1,6 @@
 # GitHubActions-dojo
 
-GitHub Actions と Docker の学習用サンプル集です。
+GitHub Actions と Docker の実践的な知見・テンプレートをまとめるリポジトリです。
 「どのケースが何を意図しているか」が分かる構成で管理しています。
 
 ## プロジェクト構造
@@ -14,6 +14,7 @@ githubactions-dojo/
 │   ├── Next.js-app-deploy/
 │   ├── build-deploy-ecr/
 │   ├── terraform-plan-diff-template/
+│   ├── release-pr-template/
 │   └── terraform-fmt-template/
 ├── Docker-cases/                # Docker のケース
 │   ├── README.md                # ケース一覧

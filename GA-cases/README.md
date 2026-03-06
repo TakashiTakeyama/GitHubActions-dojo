@@ -1,6 +1,6 @@
 # GA-cases（GitHub Actions Cases）
 
-GitHub Actions のワークフロー学習用ケース集です。
+GitHub Actions のワークフロー知見とテンプレートを整理するケース集です。
 公開リポジトリで初見の人にも伝わるよう、ここでは `GA` を `GitHub Actions` の略として扱います。
 
 ## ケース一覧
@@ -17,6 +17,8 @@ GitHub Actions のワークフロー学習用ケース集です。
   - PR 起点で Terraform plan を行う reusable workflow テンプレート
 - `terraform-fmt-template/`
   - PR 起点で Terraform fmt チェックを行うテンプレート
+- `release-pr-template/`
+  - `develop -> main` の Release PR を自動作成・更新するテンプレート
 
 ## 命名ルール（このフォルダでの推奨）
 

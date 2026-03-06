@@ -1,0 +1,149 @@
+name: release-pr-template
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+env:
+  # 利用先リポジトリではこの2つを自分たちの運用ブランチに合わせて変更する
+  BASE_BRANCH: main
+  HEAD_BRANCH: develop
+  TIMEZONE: Asia/Tokyo
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  # 同じブランチで連続 push された場合は古い実行を止め、最新状態だけを反映する
+  group: release-pr-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inspect_release_pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      has_changes: ${{ steps.collect.outputs.has_changes }}
+      existing_pr: ${{ steps.collect.outputs.existing_pr }}
+      title: ${{ steps.collect.outputs.title }}
+      body: ${{ steps.collect.outputs.body }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0
+        with:
+          fetch-depth: 0
+
+      - name: Collect release PR metadata
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin "${BASE_BRANCH}" "${HEAD_BRANCH}"
+
+          # 差分がない場合は PR を作らずに終了する
+          if [[ -z "$(git rev-list "origin/${BASE_BRANCH}..origin/${HEAD_BRANCH}")" ]]; then
+            date_label="$(TZ="${TIMEZONE}" date +"%Y-%m-%d")"
+
+            echo "has_changes=false" >> "${GITHUB_OUTPUT}"
+            echo "existing_pr=" >> "${GITHUB_OUTPUT}"
+            echo "title=Release ${HEAD_BRANCH} -> ${BASE_BRANCH} (${date_label})" >> "${GITHUB_OUTPUT}"
+            {
+              echo "body<<EOF"
+              echo "## Summary"
+              echo
+              echo "No changes between \`${HEAD_BRANCH}\` and \`${BASE_BRANCH}\`."
+              echo "EOF"
+            } >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          existing_pr="$(
+            gh pr list \
+              --base "${BASE_BRANCH}" \
+              --head "${HEAD_BRANCH}" \
+              --state open \
+              --json number \
+              --jq '.[0].number // ""'
+          )"
+
+          date_label="$(TZ="${TIMEZONE}" date +"%Y-%m-%d")"
+          title="Release ${HEAD_BRANCH} -> ${BASE_BRANCH} (${date_label})"
+
+          # コミットメッセージ解析ではなく、各コミットに紐づく PR を GitHub API から取得する
+          mapfile -t pr_rows < <(
+            for sha in $(git rev-list --reverse "origin/${BASE_BRANCH}..origin/${HEAD_BRANCH}"); do
+              gh api \
+                -H "Accept: application/vnd.github+json" \
+                "/repos/${GITHUB_REPOSITORY}/commits/${sha}/pulls" \
+                --jq '.[] | [.number, .title, .html_url] | @tsv'
+            done | awk -F '\t' '!seen[$1]++'
+          )
+
+          {
+            echo "## Summary"
+            echo
+            echo "This PR promotes changes from \`${HEAD_BRANCH}\` to \`${BASE_BRANCH}\`."
+            echo
+
+            if (( ${#pr_rows[@]} > 0 )); then
+              echo "## Included pull requests"
+              echo
+              for row in "${pr_rows[@]}"; do
+                IFS=$'\t' read -r number pr_title pr_url <<< "${row}"
+                printf -- "- #%s [%s](%s)\n" "${number}" "${pr_title}" "${pr_url}"
+              done
+            else
+              echo "## Included commits"
+              echo
+              git log --reverse --pretty='- `%h` %s' "origin/${BASE_BRANCH}..origin/${HEAD_BRANCH}"
+            fi
+          } > body.md
+
+          echo "has_changes=true" >> "${GITHUB_OUTPUT}"
+          echo "existing_pr=${existing_pr}" >> "${GITHUB_OUTPUT}"
+          echo "title=${title}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "body<<EOF"
+            cat body.md
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+  sync_release_pr:
+    needs: inspect_release_pr
+    if: needs.inspect_release_pr.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Create or update release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXISTING_PR: ${{ needs.inspect_release_pr.outputs.existing_pr }}
+          PR_TITLE: ${{ needs.inspect_release_pr.outputs.title }}
+          PR_BODY: ${{ needs.inspect_release_pr.outputs.body }}
+        run: |
+          set -euo pipefail
+
+          printf '%s\n' "${PR_BODY}" > body.md
+
+          # 既存の Release PR があれば更新し、なければ新規作成する
+          if [[ -n "${EXISTING_PR}" ]]; then
+            gh pr edit "${EXISTING_PR}" \
+              --title "${PR_TITLE}" \
+              --body-file body.md
+            exit 0
+          fi
+
+          gh pr create \
+            --base "${BASE_BRANCH}" \
+            --head "${HEAD_BRANCH}" \
+            --title "${PR_TITLE}" \
+            --body-file body.md

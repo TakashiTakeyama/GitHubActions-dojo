@@ -1,6 +1,6 @@
 # Docker-cases
 
-Dockerfile / docker-compose の学習用ケース集です。
+Dockerfile / docker-compose の知見とテンプレートを整理するケース集です。
 
 ## ケース一覧
 

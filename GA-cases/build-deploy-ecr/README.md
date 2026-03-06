@@ -1,6 +1,6 @@
 # build-deploy-ecr ケース
 
-Docker イメージをビルドして Amazon ECR へ push するサンプル集です。
+Docker イメージをビルドして Amazon ECR へ push するための知見とテンプレートをまとめています。
 
 ## サブケース
 
